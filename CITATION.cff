@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use variance-lies in your research, please cite it as below."
+title: "VARIANCE-LIES: variance captured is not behavior preserved"
+authors:
+  - family-names: Dhinwa
+    given-names: Kapil
+version: 0.1.0
+date-released: "2026-11-09"
+license: MIT
+repository-code: "https://github.com/kapildhinwa2010-dev/VARIEANCE-LIES"
+abstract: "A rank-sweep probe that measures activation variance captured and behavior preserved side by side on any Llama/Qwen/GPT2-style model, exposing the gap between compression metrics and actual behavior."

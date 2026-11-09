@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "variance-lies"
+version = "0.1.0"
+description = "VARIANCE-LIES: variance captured is not behavior preserved"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Kapil Dhinwa" }]
+dependencies = [
+  "torch",
+  "transformers",
+  "numpy",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
