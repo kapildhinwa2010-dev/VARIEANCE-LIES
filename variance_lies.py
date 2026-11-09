@@ -9,7 +9,8 @@ curves side by side:
 
 If the curves disagree, the compression metric is lying.
 
-GPU-first, CPU-supported. No training. Bounded evaluation.
+CPU-default; GPU placement is not configured by this script. No training.
+Bounded evaluation.
 """
 
 __version__ = "0.1.0"
@@ -30,10 +31,8 @@ def get_layers(model):
 
 
 def load_tok(name):
-    try:
-        return AutoTokenizer.from_pretrained(name)
-    except Exception:
-        return AutoTokenizer.from_pretrained("gpt2")
+    # Do not hide tokenizer loading errors or silently pair a model with GPT-2.
+    return AutoTokenizer.from_pretrained(name)
 
 
 @torch.no_grad()
@@ -50,21 +49,29 @@ def collect_deltas(model, tok, prompts, max_len=64):
             store[idx].append(d.reshape(-1, d.shape[-1]).float().cpu())
         return hook
 
-    for i, lyr in enumerate(layers):
-        handles.append(lyr.register_forward_hook(make_hook(i)))
-    for p in prompts:
-        ids = tok(p, return_tensors="pt").input_ids[:, :max_len]
-        model(ids)
-    for h in handles:
-        h.remove()
+    try:
+        for i, lyr in enumerate(layers):
+            handles.append(lyr.register_forward_hook(make_hook(i)))
+        for p in prompts:
+            ids = tok(p, return_tensors="pt").input_ids[:, :max_len]
+            model(ids)
+    finally:
+        for h in handles:
+            h.remove()
     return store
 
 
 def spectrum(store, rank):
     """Per-layer: basis + fraction of delta variance captured at this rank."""
+    if rank < 0:
+        raise ValueError("rank must be non-negative")
+    if not store:
+        raise ValueError("store must contain at least one layer")
     bases = {}
     fracs = []
     for i, chunks in store.items():
+        if not chunks:
+            raise ValueError(f"layer {i} has no collected deltas")
         D = torch.cat(chunks, dim=0)
         mu = D.mean(dim=0)
         A = D - mu
@@ -115,19 +122,26 @@ def greedy(model, tok, prompt, steps):
 
 
 def probe(model, tok, store, prompts, rank, steps):
+    if steps < 0:
+        raise ValueError("steps must be non-negative")
+    if not prompts:
+        raise ValueError("prompts must contain at least one prompt")
     bases, var_frac = spectrum(store, rank)
     replay = Replay(model, bases)
     agree = 0
     total = 0
-    for p in prompts:
+    try:
+        for p in prompts:
+            replay.on = False
+            ref = greedy(model, tok, p, steps)
+            replay.on = True
+            rep = greedy(model, tok, p, steps)
+            replay.on = False
+            agree += sum(1 for a, b in zip(ref, rep) if a == b)
+            total += steps
+    finally:
         replay.on = False
-        ref = greedy(model, tok, p, steps)
-        replay.on = True
-        rep = greedy(model, tok, p, steps)
-        replay.on = False
-        agree += sum(1 for a, b in zip(ref, rep) if a == b)
-        total += steps
-    replay.remove()
+        replay.remove()
     return {"rank": rank, "variance_captured": round(var_frac, 4), "behavior": round(agree / max(total, 1), 4)}
 
 
