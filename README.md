@@ -24,7 +24,7 @@ If the curves disagree, the compression metric is **lying**.
 
 ## ⚡ Install
 
-GPU (default):
+Install the standard PyTorch wheel (the script currently loads models on CPU by default):
 
     pip install torch
     pip install -r requirements.txt
@@ -50,8 +50,9 @@ Output: a table + `variance_vs_behavior.json` with both curves.
 ## 🤔 Why this matters
 
 If variance were behavior, compression would be solved. It is not.
-This repo is the smallest honest instrument that shows the difference
-on any Llama/Qwen/GPT2-style model, on a laptop GPU or CPU. 🙏
+This repo is a small instrument that shows the difference on supported
+Llama/Qwen/GPT-2-style models. The current CLI runs on CPU; GPU placement
+is not configured by the script. 🙏
 
 ## ⚖️ License
 

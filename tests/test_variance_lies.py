@@ -5,7 +5,7 @@ sys.path.insert(0, ".")
 import pytest
 from transformers import AutoModelForCausalLM
 
-from variance_lies import collect_deltas, get_layers, load_tok, probe
+from variance_lies import collect_deltas, get_layers, load_tok, probe, spectrum
 
 MODEL = "hf-internal-testing/tiny-random-gpt2"
 
@@ -42,3 +42,23 @@ def test_variance_not_equal_behavior(setup):
     model, tok, store, prompts = setup
     row = probe(model, tok, store, prompts, rank=4, steps=3)
     assert abs(row["variance_captured"] - row["behavior"]) > 1e-6
+
+
+def test_negative_rank_rejected():
+    with pytest.raises(ValueError, match="rank must be non-negative"):
+        spectrum({}, rank=-1)
+
+
+def test_empty_store_rejected():
+    with pytest.raises(ValueError, match="store must contain at least one layer"):
+        spectrum({}, rank=0)
+
+
+def test_negative_steps_rejected():
+    with pytest.raises(ValueError, match="steps must be non-negative"):
+        probe(None, None, {}, [], rank=0, steps=-1)
+
+
+def test_empty_prompts_rejected():
+    with pytest.raises(ValueError, match="prompts must contain at least one prompt"):
+        probe(None, None, {}, [], rank=0, steps=0)
